@@ -1,0 +1,22 @@
+# 디스크 이미지 파일
+disk.img
+
+# 마운트 디렉토리 (만약 생성된다면)
+mnt/
+
+# QEMU, EFI 관련 임시 파일
+*.efi
+*.log
+
+# 편집기 백업 파일
+*~
+*.swp
+
+# MacOS, Windows 시스템 파일
+.DS_Store
+Thumbs.db
+
+# 빌드 결과물
+build/
+out/
+
