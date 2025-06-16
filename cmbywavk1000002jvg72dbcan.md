@@ -1,5 +1,5 @@
 ---
-title: "(4) Uefi"
+title: "(4) uefi"
 datePublished: Mon Jun 16 2025 09:32:00 GMT+0000 (Coordinated Universal Time)
 cuid: cmbywavk1000002jvg72dbcan
 slug: 4-uefi
