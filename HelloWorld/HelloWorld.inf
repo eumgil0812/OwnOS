@@ -1,0 +1,21 @@
+# BootLoader.inf
+[Defines]
+  INF_VERSION    = 0x00010005
+  BASE_NAME      = BootLoader
+  FILE_GUID      = 3995fb85-fdfc-4c3a-9754-bcceedb7ef11
+  MODULE_TYPE    = UEFI_APPLICATION
+  ENTRY_POINT    = UefiMain
+
+[Sources]
+  BootLoader.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  UefiLib
+  UefiApplicationEntryPoint 
+  UefiBootServicesTableLib
+
+[Protocols]
+[Guids]
