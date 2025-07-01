@@ -21,6 +21,8 @@ typedef void (*KernelEntry)(FrameBufferInfo*);
 
 EFI_STATUS EFIAPI UefiMain(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
     EFI_STATUS Status;
+    EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop;
+    EFI_GUID gopGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
     EFI_LOADED_IMAGE_PROTOCOL *LoadedImage;
     EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *FileSystem;
     EFI_FILE_PROTOCOL *RootDir, *KernelFile;
@@ -73,11 +75,18 @@ EFI_STATUS EFIAPI UefiMain(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *Syste
 
     Print(L"[INFO] Kernel loaded at address: %p\n", KernelBuffer);
 
-    // Setup framebuffer info (simplified: not really querying GOP here)
-    fbInfo.FrameBufferBase = (VOID*)0x00000000; // replace with actual address if using GOP
-    fbInfo.HorizontalResolution = 800; // fake values
-    fbInfo.VerticalResolution = 600;
-    fbInfo.PixelsPerScanLine = 800;
+ 
+    Status = gBS->LocateProtocol(&gopGuid, NULL, (VOID**)&Gop);
+    if (EFI_ERROR(Status)) {
+        Print(L"Failed to get GOP\n");
+        return Status;
+    }
+
+    // Fill fbInfo with real data
+    fbInfo.FrameBufferBase = (VOID*)Gop->Mode->FrameBufferBase;
+    fbInfo.HorizontalResolution = Gop->Mode->Info->HorizontalResolution;
+    fbInfo.VerticalResolution = Gop->Mode->Info->VerticalResolution;
+    fbInfo.PixelsPerScanLine = Gop->Mode->Info->PixelsPerScanLine;
 
     // Entry point is at beginning for this simple binary
     EntryPoint = (KernelEntry)KernelBuffer;
