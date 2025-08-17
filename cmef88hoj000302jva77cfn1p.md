@@ -164,7 +164,7 @@ int main() {
 } // Destructor automatically calls fclose()
 ```
 
-## Example 2: Memory RAII Wrapper
+### Example 2: Memory RAII Wrapper
 
 ```cpp
 #include <cstdlib>
