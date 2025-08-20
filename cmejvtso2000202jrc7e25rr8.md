@@ -125,16 +125,16 @@ When a CUDA API function fails, it returns an error code of type `cudaError_t`.
 To convert this code into a human-readable string, `cudaGetErrorName()` is used.
 
 * ```cpp
-      const char* cudaGetErrorName(cudaError_t error);
+        const char* cudaGetErrorName(cudaError_t error);
     ```
     
 * ```cpp
-    int *d_array;
-    cudaError_t err = cudaMalloc((void**)&d_array, -1); // intentional error
-    
-    if (err != cudaSuccess) {
-        printf("Error: %s\n", cudaGetErrorName(err));
-    }
+      int *d_array;
+      cudaError_t err = cudaMalloc((void**)&d_array, -1); // intentional error
+      
+      if (err != cudaSuccess) {
+          printf("Error: %s\n", cudaGetErrorName(err));
+      }
     ```
     
 
@@ -248,8 +248,8 @@ int main() {
 
 ## (a) Device Memory Copy – `cudaMemcpy()`
 
-CUDA 프로그램에서 **호스트 메모리 ↔ 디바이스 메모리** 간 데이터 전송은 필수적이다.  
-이때 사용하는 API가 `cudaMemcpy()` 이다.
+In CUDA programs, data transfer between host memory and device memory is essential.  
+The API used for this purpose is **cudaMemcpy()**..
 
 ---
 
