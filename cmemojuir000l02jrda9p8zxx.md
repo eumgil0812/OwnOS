@@ -171,3 +171,52 @@ int gridSize = (N + blockSize - 1) / blockSize;
 
 ✅ Summary: `ceil()` ensures that **all tasks are covered** when computing the grid size.  
 It’s essential in CUDA for grid/block configuration.
+
+Got it 👍 Here’s the same Q&A style explanation translated into **English**:
+
+---
+
+## Q. If I allocate more blocks, there will be extra threads. What happens to those threads?
+
+For example:
+
+* Total data elements: `N = 1000`
+    
+* Block size: `blockSize = 256`
+    
+* Required number of blocks = `(1000 + 255) / 256 = 4`
+    
+
+👉 Total threads = `4 × 256 = 1024`  
+👉 But only 1000 are actually needed, so **24 threads remain unused**.
+
+---
+
+### A. So how does CUDA handle these extra threads?
+
+The answer is simple:  
+👉 **The extra threads simply do nothing.**
+
+Each thread computes its global ID (`idx`) and then checks:
+
+```cpp
+if (idx < N) {
+    // Process only valid data
+}
+```
+
+Threads with IDs 0–999 will perform useful work,  
+while threads with IDs 1000–1023 will fail the condition and do nothing.
+
+---
+
+### Q. But why create extra threads at all?
+
+* GPUs perform best when the number of threads per block is a multiple of **32, 64, 128, 256, 512, or 1024** (warp-friendly sizes).
+    
+* If you try to match `N=1000` exactly with irregular block sizes, you often lose performance due to poor warp alignment.
+    
+* Therefore, the standard approach is to **launch a few extra threads and simply ignore them** with a boundary check.
+    
+
+---
