@@ -26,8 +26,6 @@ GPU computation begins with a **kernel launch**, and all data is managed within 
 
 ![](https://cdn.hashnode.com/res/hashnode/image/upload/v1755683833545/f873acb3-db16-4931-90e5-938b3e0f2b56.png align="center")
 
-GPU computation begins with a kernel launch, and all data is managed in device memory.
+Since the results of computations performed by the GPU through a kernel launch are stored in device memory, they must be transferred back to host memory. Therefore, the final step in the flow of a CUDA program is copying the result data from device memory to host memory.
 
 ![](https://cdn.hashnode.com/res/hashnode/image/upload/v1755683858452/d1ea9657-7a5b-4796-b49b-b9aebef28d1c.png align="center")
-
-Since the results of computations performed by the GPU through a kernel launch are stored in device memory, they must be transferred back to host memory. Therefore, the final step in the flow of a CUDA program is copying the result data from device memory to host memory.
