@@ -66,8 +66,8 @@ int idx = threadIdx.x + blockIdx.x * blockDim.x
 * 예: 2D grid, 2D block의 경우
     
 * ```cpp
-    int idx = threadIdx.x + blockIdx.x * blockDim.x
-            + (threadIdx.y + blockIdx.y * blockDim.y) * (gridDim.x * blockDim.x);
+      int idx = threadIdx.x + blockIdx.x * blockDim.x
+              + (threadIdx.y + blockIdx.y * blockDim.y) * (gridDim.x * blockDim.x);
     ```
     
     Here, the indices are “flattened” in row-major order: **x → y → z**.
@@ -94,7 +94,7 @@ int main() {
 }
 ```
 
-### (4) General Formula for 3D Grids and Blocks
+## (4) General Formula for 3D Grids and Blocks
 
 To generalize to 3D:
 
