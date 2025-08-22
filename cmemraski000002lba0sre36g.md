@@ -61,17 +61,7 @@ int idx = threadIdx.x + blockIdx.x * blockDim.x
         + (threadIdx.y + blockIdx.y * blockDim.y) * (gridDim.x * blockDim.x);
 ```
 
-* 2차원 블록/그리드에서도 같은 원리.
-    
-* 예: 2D grid, 2D block의 경우
-    
-* ```cpp
-      int idx = threadIdx.x + blockIdx.x * blockDim.x
-              + (threadIdx.y + blockIdx.y * blockDim.y) * (gridDim.x * blockDim.x);
-    ```
-    
-    Here, the indices are “flattened” in row-major order: **x → y → z**.
-    
+Here, the indices are “flattened” in row-major order: **x → y → z**.
 
 ## (3) Applying Indexing in a Kernel
 
