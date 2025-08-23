@@ -79,7 +79,7 @@ gemm_tiled<<<grid, block>>>(A, B, C, M, N, K);
 * `__restrict__` tells the compiler the pointers **don’t alias** → safe and often faster when input/output buffers are **disjoint**.
     
 
-### 4) Why avoid shared memory for simple add (`matAdd`)?
+## 4) Why avoid shared memory for simple add (`matAdd`)?
 
 * `C[i] = A[i] + B[i]` reads each element **once** → **no reuse**.
     
@@ -88,7 +88,7 @@ gemm_tiled<<<grid, block>>>(A, B, C, M, N, K);
 * Do **global → registers directly** and just ensure **coalesced** access. Done.
     
 
-### 5) Tiny practice path (for first-timers)
+## 5) Tiny practice path (for first-timers)
 
 * **matAdd** (you already did): build intuition for **coalescing**.
     
@@ -97,7 +97,7 @@ gemm_tiled<<<grid, block>>>(A, B, C, M, N, K);
 * Switch to `gemm_tiled`, compare speed with `BLOCK=16` → `32`.
     
 
-### 6) Sticky analogy (super simple)
+## 6) Sticky analogy (super simple)
 
 * **Global memory** = the supermarket (far; slow round-trips).
     
@@ -108,7 +108,7 @@ gemm_tiled<<<grid, block>>>(A, B, C, M, N, K);
 * **Elementwise add** uses each ingredient **once**, so no need for the pantry.
     
 
-### 7) What to remember (that’s enough for now)
+## 7) What to remember (that’s enough for now)
 
 * Shared memory helps **only when there’s reuse**.
     
