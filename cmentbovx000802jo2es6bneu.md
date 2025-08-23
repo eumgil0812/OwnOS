@@ -7,7 +7,7 @@ tags: cuda
 
 ---
 
-## NVIDIA GPU Architecture
+# NVIDIA GPU Architecture
 
 In 2006, NVIDIA introduced CUDA, enabling parallel computation on GPUs rather than CPUs. Since then, GPUs have evolved from being just graphics processors into the **core engines of general-purpose computation**.
 
@@ -16,7 +16,7 @@ But here’s the big question:
 
 To answer that, we need to take a closer look at the design philosophy behind **NVIDIA’s GPU architecture**.
 
-### 1\. Streaming Multiprocessor (SM)
+## 1\. Streaming Multiprocessor (SM)
 
 The image below shows the internal structure of a **Streaming Multiprocessor (SM)** in the Fermi architecture.
 
@@ -39,7 +39,7 @@ Inside an SM, you’ll find not only multiple **CUDA Cores**, but also supportin
 
 The diagram above illustrates the internal organization of an SM in the Fermi architecture.
 
-### 2\. CUDA Cores
+## 2\. CUDA Cores
 
 A **CUDA Core** is the most fundamental computational unit of an NVIDIA GPU — the smallest unit that actually performs arithmetic operations.
 
@@ -79,7 +79,7 @@ As GPU architectures advanced, CUDA Cores evolved beyond just floating-point ope
 It’s misleading to assume that *“more CUDA Cores = more performance.”*  
 Real-world performance depends heavily on factors such as clock speed, IPC (instructions per cycle), memory bandwidth, and overall architectural improvements.
 
-## CUDA Thread Hierarchy and GPU Hardware
+# CUDA Thread Hierarchy and GPU Hardware
 
 ## 1\. Grid → GPU
 
@@ -89,7 +89,7 @@ Even if a system has multiple GPUs, a single grid cannot span across them or mig
 On the other hand, a single GPU can handle multiple grids.  
 This means that a single GPU can run **several CUDA programs (kernel launches) concurrently**, sharing resources across them.
 
-### 2\. Thread Block → SM
+## 2\. Thread Block → SM
 
 ![](https://cdn.hashnode.com/res/hashnode/image/upload/v1755924458816/b260b20b-6dc8-4bbf-b719-97c1c5f2da6f.png align="center")
 
@@ -124,7 +124,7 @@ Active Blocks
 * If there are more blocks than the SM can handle (or resources are insufficient), the extra blocks are queued and wait until resources free up.
     
 
-### 3\. Warp & Threads → CUDA Cores inside an SM
+## 3\. Warp & Threads → CUDA Cores inside an SM
 
 What is a Warp?
 
@@ -168,7 +168,7 @@ Key Takeaways
 * **Scheduling is done at the warp level** under the SIMT model
     
 
-### 4\. Thread Context
+## 4\. Thread Context
 
 | Item | CPU | GPU |
 | --- | --- | --- |
@@ -291,11 +291,11 @@ As a result, the concert takes **twice as long** to finish.
 * Warp divergence is a **major source of performance loss** and must be carefully considered when optimizing CUDA programs
     
 
-## Hiding Memory Access Latency
+# Hiding Memory Access Latency
 
 ![](https://cdn.hashnode.com/res/hashnode/image/upload/v1755925604314/5f227056-71f0-48a5-8dfc-bf0af7cc3cfd.png align="center")
 
-### 1) What Is Memory Access Latency?
+## 1) What Is Memory Access Latency?
 
 GPU operations can be divided into two broad categories:
 
@@ -311,7 +311,7 @@ But GPUs, with thousands of cores running in parallel, take a very different app
 
 ---
 
-### 2) The GPU’s Solution: Massive Threads
+## 2) The GPU’s Solution: Massive Threads
 
 GPUs keep **far more threads ready than the number of cores available**.
 
@@ -326,7 +326,7 @@ By alternating execution like this, CUDA cores are rarely idle — computation k
 
 ---
 
-### 3) Visualizing the Concept
+## 3) Visualizing the Concept
 
 ![](https://cdn.hashnode.com/res/hashnode/image/upload/v1755925745829/7c1244b8-d6e8-42dd-9462-2a0e9f084683.png align="center")
 
@@ -334,17 +334,17 @@ By alternating execution like this, CUDA cores are rarely idle — computation k
 
 * * **Thread 1**: Stalls while waiting for a memory access → its CUDA Core would normally sit idle.
         
-    * But if **Thread 2** is already ready to go → the SM immediately switches to it and starts computation.
+        * But if **Thread 2** is already ready to go → the SM immediately switches to it and starts computation.
+            
+        * Then **Thread 3** comes in, and execution continues seamlessly.
+            
         
-    * Then **Thread 3** comes in, and execution continues seamlessly.
+        👉 In other words: *“while one thread is waiting, another thread fills the gap.”*
         
-    
-    👉 In other words: *“while one thread is waiting, another thread fills the gap.”*
-    
 
 ---
 
-### 4) Why Can GPUs Do This?
+## 4) Why Can GPUs Do This?
 
 On a **CPU**, switching threads is expensive because the thread context must be **saved to and restored from memory**.
 
@@ -356,7 +356,7 @@ This is what enables GPUs to keep **thousands of threads resident and ready**, e
 
 ---
 
-### 5) Algorithm Considerations
+## 5) Algorithm Considerations
 
 * **I/O-Bound Workloads (data access heavy)**  
     → Increasing the number of threads helps hide memory latency more effectively.  
@@ -371,7 +371,7 @@ A common rule of thumb is to start with about **10× as many threads as CUDA cor
 
 ---
 
-### 6) Key Takeaways
+## 6) Key Takeaways
 
 * **Memory access latency = wasted performance**
     
