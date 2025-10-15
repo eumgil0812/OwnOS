@@ -1,5 +1,17 @@
-*.img
+# Toolchains
+Kernel/gcc-14.2.0/
+Kernel/binutils-2.42/
+
+# Build outputs
+*.o
 *.elf
 *.efi
-*.o
-*.md
+*.img
+
+# Mount & temp folders
+mnt/
+build/
+disk.img
+
+# Private keys (보안)
+priv.pem

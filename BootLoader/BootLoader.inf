@@ -1,5 +1,5 @@
 [Defines]
-  INF_VERSION    = 0x00010005
+  INF_VERSION    = 0x00010017
   BASE_NAME      = BootLoader
   FILE_GUID      = 3995fb85-fdfc-4c3a-9754-bcceedb7ef11
   MODULE_TYPE    = UEFI_APPLICATION
@@ -7,22 +7,59 @@
 
 [Sources]
   BootLoader.c
+  pubkey_der.c
+
+  mbedtls/library/sha256.c
+  mbedtls/library/pk.c
+  mbedtls/library/pkparse.c
+  mbedtls/library/asn1parse.c
+  mbedtls/library/bignum.c
+  mbedtls/library/md.c
+  mbedtls/library/md5.c
+  mbedtls/library/platform_util.c
+  mbedtls/library/rsa.c
+  mbedtls/library/rsa_internal.c
+  mbedtls/library/oid.c
+  mbedtls/library/asn1write.c
+  mbedtls/library/sha1.c
+  mbedtls/library/ripemd160.c
+
+  mbedtls/library/sha512.c
+  mbedtls/library/hmac_drbg.c
+  # ECC / PEM 기능용
+  mbedtls/library/ecp.c
+  mbedtls/library/ecp_curves.c
+  mbedtls/library/ecdsa.c
+  mbedtls/library/pem.c
+  mbedtls/library/base64.c
+  mbedtls/library/pk_wrap.c
+
+  mbedtls/library/constant_time.c
+  libc_shim.c
 
 [Packages]
   MdePkg/MdePkg.dec
 
-
 [LibraryClasses]
   UefiLib
-  UefiApplicationEntryPoint 
+  UefiApplicationEntryPoint
   UefiBootServicesTableLib
   MemoryAllocationLib
   BaseMemoryLib
   DevicePathLib
+  PrintLib
 
 [Protocols]
   gEfiSimpleFileSystemProtocolGuid
   gEfiLoadedImageProtocolGuid
- gEfiGraphicsOutputProtocolGuid
+  gEfiGraphicsOutputProtocolGuid
+
 [Guids]
-  gEfiFileInfoGuid  
+  gEfiFileInfoGuid
+  gEfiAcpi20TableGuid
+  gEfiAcpiTableGuid
+
+[BuildOptions]
+
+  GCC:*_*_*_DLINK_FLAGS = -lgcc
+  GCC:*_*_*_CC_FLAGS    = -I$(WORKSPACE)/App/BootLoader/mbedtls/include -U_FORTIFY_SOURCE -fno-stack-protector

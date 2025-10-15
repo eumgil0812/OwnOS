@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "memory.h": "c",
+        "stdint.h": "c",
+        "font8x16.h": "c",
+        "framebuffer.h": "c"
+    }
+}
