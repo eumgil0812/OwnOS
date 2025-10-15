@@ -1,6 +1,8 @@
 # Toolchains
 Kernel/gcc-14.2.0/
 Kernel/binutils-2.42/
+# Ignore build output
+Kernel/build-binutils/
 
 # Build outputs
 *.o
