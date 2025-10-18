@@ -10,7 +10,14 @@ typedef struct {
     unsigned int PixelsPerScanLine;
     uint8_t verified;
     uint8_t kernel_hash[32];
+
+    // 📌 UEFI Memory Map 전달
+    void* MemoryMap;
+    uint64_t MemoryMapSize;
+    uint64_t DescriptorSize;
+    uint64_t DescriptorVersion;
 } BootInfo;
+
 
 // 📌 선언 추가
 void putpixel(BootInfo* bi, int x, int y, uint32_t color);
