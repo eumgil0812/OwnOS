@@ -1,7 +1,8 @@
 #include <stdarg.h>
 #include "fb.h"
 
-// 간단한 정수 → 문자열 변환
+// Convert an unsigned integer to a string in the specified base
+// Supports decimal (10) and hexadecimal (16)
 static void itoa(unsigned int value, char* buffer, int base) {
     char* ptr = buffer;
     char* ptr1 = buffer;
@@ -15,6 +16,8 @@ static void itoa(unsigned int value, char* buffer, int base) {
     } while (value);
 
     *ptr-- = '\0';
+
+    // Reverse the string
     while (ptr1 < ptr) {
         tmp_char = *ptr;
         *ptr-- = *ptr1;
@@ -22,6 +25,8 @@ static void itoa(unsigned int value, char* buffer, int base) {
     }
 }
 
+// Simple kernel printf-like function
+// Supports %d, %x, %s, %c, and %%
 void kprintf(BootInfo* bi, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
@@ -32,7 +37,7 @@ void kprintf(BootInfo* bi, const char* fmt, ...) {
         if (*p == '%') {
             p++;
             switch (*p) {
-                case 'd': {
+                case 'd': {  // Decimal integer
                     int val = va_arg(args, int);
                     if (val < 0) {
                         kputs_fb(bi, "-");
@@ -42,36 +47,37 @@ void kprintf(BootInfo* bi, const char* fmt, ...) {
                     kputs_fb(bi, buf);
                     break;
                 }
-                case 'x': {
+                case 'x': {  // Hexadecimal integer
                     int val = va_arg(args, int);
                     itoa((unsigned int)val, buf, 16);
                     kputs_fb(bi, buf);
                     break;
                 }
-                case 's': {
+                case 's': {  // String
                     char* str = va_arg(args, char*);
                     if (str) kputs_fb(bi, str);
                     else kputs_fb(bi, "(null)");
                     break;
                 }
-                case 'c': {
+                case 'c': {  // Single character
                     char ch = (char)va_arg(args, int);
                     char tmp[2] = { ch, 0 };
                     kputs_fb(bi, tmp);
                     break;
                 }
-                case '%': {
+                case '%': {  // Literal %
                     kputs_fb(bi, "%");
                     break;
                 }
-                default:
-                    // 알 수 없는 포맷은 그냥 출력
+                default: {   // Unknown format specifier
                     kputs_fb(bi, "%");
                     char tmp[2] = { *p, 0 };
                     kputs_fb(bi, tmp);
                     break;
+                }
             }
         } else {
+            // Normal character
             char tmp[2] = { *p, 0 };
             kputs_fb(bi, tmp);
         }

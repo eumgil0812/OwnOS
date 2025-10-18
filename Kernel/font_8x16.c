@@ -8,7 +8,13 @@
 #include "font_8x16.h"
 
 
+/*
+Font: VGA 8x16
+Source: Linux kernel 4.x (drivers/video/console/font_8x16.c)
+License: GPLv2
+URL: https://www.kernel.org
 
+ */
 
 unsigned char fontdata_8x16[FONTDATAMAX] = {
 

@@ -1,25 +1,25 @@
 #ifndef KPRINTF_H
 #define KPRINTF_H
 
-#include "fb.h"  // BootInfo 구조체 사용을 위해 필요
+#include "fb.h"  // Required for BootInfo structure
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * @brief 커널 printf 함수 (Framebuffer 콘솔 출력)
+ * @brief Minimal kernel printf function (Framebuffer console output)
  *
- * 지원 포맷:
- *   - %d : 10진수 (음수 지원)
- *   - %x : 16진수
- *   - %s : 문자열
- *   - %c : 문자
- *   - %% : '%' 출력
+ * Supported format specifiers:
+ *   - %d : Decimal integer (supports negative values)
+ *   - %x : Hexadecimal integer
+ *   - %s : String
+ *   - %c : Character
+ *   - %% : Print literal '%'
  *
- * @param bi   BootInfo 포인터 (Framebuffer 정보)
- * @param fmt  포맷 문자열
- * @param ...  가변 인자
+ * @param bi   Pointer to BootInfo (framebuffer information)
+ * @param fmt  Format string
+ * @param ...  Variadic arguments
  */
 void kprintf(BootInfo* bi, const char* fmt, ...);
 

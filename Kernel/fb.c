@@ -12,7 +12,7 @@ static int cursor_y = 0;
 static uint32_t text_fg = 0x00FFFFFF;
 static uint32_t text_bg = COLOR_DARK_GRAY;
 
-// 📜 개행 처리 함수
+// Move the cursor to a new line and scroll if needed
 static void fb_newline(BootInfo* bi) {
     cursor_x = 0;
     cursor_y += font_vga_8x16.height;
@@ -21,7 +21,7 @@ static void fb_newline(BootInfo* bi) {
     }
 }
 
-// 🖼️ 문자 출력 함수
+// Draw a single character on the framebuffer
 void draw_char(BootInfo* bi, int x, int y, char c, uint32_t fg, uint32_t bg) {
     const uint8_t* glyph = (const uint8_t*)font_vga_8x16.data + (c * font_vga_8x16.height);
     uint32_t* fb = (uint32_t*)bi->FrameBufferBase;
@@ -34,7 +34,7 @@ void draw_char(BootInfo* bi, int x, int y, char c, uint32_t fg, uint32_t bg) {
     }
 }
 
-// 📜 스크롤 기능
+// Scroll the framebuffer up by one line of text
 void fb_scroll(BootInfo* bi) {
     int line_height = font_vga_8x16.height;
     int screen_width = bi->HorizontalResolution;
@@ -60,7 +60,7 @@ void fb_scroll(BootInfo* bi) {
     cursor_x = 0;
 }
 
-// 🖨️ 문자열 출력 함수
+// Print a string to the framebuffer
 void kputs_fb(BootInfo* bi, const char* s) {
     while (*s) {
         if (*s == '\n') {
@@ -76,7 +76,7 @@ void kputs_fb(BootInfo* bi, const char* s) {
     }
 }
 
-// 📌 단일 픽셀을 그리는 기본 함수
+// Draw a single pixel on the framebuffer
 void putpixel(BootInfo* bi, int x, int y, uint32_t color) {
     uint32_t* fb = (uint32_t*)bi->FrameBufferBase;
     fb[y * bi->PixelsPerScanLine + x] = color;
