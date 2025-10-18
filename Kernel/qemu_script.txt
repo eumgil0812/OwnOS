@@ -1,0 +1,28 @@
+# 1. Create a raw disk image
+qemu-img create -f raw disk.img 200M
+
+# 2. Format it with FAT32
+mkfs.fat -n 'OWN OS' -s 2 -f 2 -R 32 -F 32 disk.img
+
+# 3. Mount the image
+mkdir -p mnt
+sudo mount -o loop disk.img mnt
+
+# 4. Create EFI boot directory
+sudo mkdir -p mnt/EFI/BOOT
+
+# 5. Copy the bootloader
+sudo cp BootLoader.efi mnt/EFI/BOOT/BOOTX64.EFI
+
+# 6. Copy the kernel ELF and its signature
+sudo cp kernel.elf mnt/
+sudo cp kernel.sig mnt/
+
+# 7. Unmount the image
+sudo umount mnt
+
+
+qemu-system-x86_64 \
+  -drive format=raw,file=disk.img \
+  -bios /usr/share/ovmf/OVMF.fd \
+  -serial stdio

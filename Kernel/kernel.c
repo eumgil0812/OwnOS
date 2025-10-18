@@ -1,62 +1,71 @@
 #include <stdint.h>
-#include "font_8x16.h"
+#include "serial.h"
+#include "fb.h"
+#include "font.h"
 
-typedef struct {
-    void* FrameBufferBase;
-    unsigned int HorizontalResolution;
-    unsigned int VerticalResolution;
-    unsigned int PixelsPerScanLine;
-    uint8_t verified;
-    uint8_t kernel_hash[32];
-} BootInfo;
+// 커서 위치 전역 변수
+#define COLOR_DARK_GRAY     0x00101010
 
-// I/O 포트 함수 정의
-static inline void outb(uint16_t port, uint8_t val) {
-    __asm__ __volatile__("outb %0, %1" : : "a"(val), "Nd"(port));
+
+static int cursor_x = 0;
+static int cursor_y = 0;
+static uint32_t text_fg = 0x00FFFFFF;
+static uint32_t text_bg = COLOR_DARK_GRAY;
+static uint32_t screen_bg = COLOR_DARK_GRAY;
+
+// 📜 개행 처리 함수
+static void fb_newline(BootInfo* bi) {
+    cursor_x = 0;
+    cursor_y += font_vga_8x16.height;
+
+    // 화면 넘어가면 맨 위로 리셋 (스크롤 기능 대신 초기화)
+    if (cursor_y + font_vga_8x16.height > (int)bi->VerticalResolution) {
+        cursor_y = 0;
+    }
 }
 
-static inline uint8_t inb(uint16_t port) {
-    uint8_t ret;
-    __asm__ __volatile__("inb %1, %0" : "=a"(ret) : "Nd"(port));
-    return ret;
+// 🖨️ 텍스트 로그 출력 함수
+void kputs_fb(BootInfo* bi, const char* s) {
+    while (*s) {
+        if (*s == '\n') {
+            fb_newline(bi);
+        } else {
+            draw_char(bi, cursor_x, cursor_y, *s, text_fg, text_bg);
+            cursor_x += font_vga_8x16.width;
+
+            // 줄 끝까지 가면 자동 개행
+            if (cursor_x + font_vga_8x16.width > (int)bi->HorizontalResolution) {
+                fb_newline(bi);
+            }
+        }
+        s++;
+    }
 }
 
-// Serial 초기화
-void serial_init() {
-    outb(0x3F8 + 1, 0x00);
-    outb(0x3F8 + 3, 0x80);
-    outb(0x3F8 + 0, 0x03);
-    outb(0x3F8 + 1, 0x00);
-    outb(0x3F8 + 3, 0x03);
-    outb(0x3F8 + 2, 0xC7);
-    outb(0x3F8 + 4, 0x0B);
-}
 
-// Serial 출력
-static inline void serial_out(char c) {
-    while ((inb(0x3F8 + 5) & 0x20) == 0);
-    outb(0x3F8, c);
-}
-
-void kputs(const char* s) {
-    while (*s) serial_out(*s++);
-}
-
-// 메인 커널
-void kernel_main(BootInfo* bi) {
+void kernel_main(BootInfo* bi) 
+{
     serial_init();
     kputs("[KERNEL] Serial initialized\n");
 
+    // 🟦 화면 전체 파란색으로 초기화
     uint32_t* fb = (uint32_t*)bi->FrameBufferBase;
-    uint32_t color = 0x00FF00FF;
+    
 
-    for (unsigned int y = 0; y < 100; y++) {
-        for (unsigned int x = 0; x < 100; x++) {
-            fb[y * bi->PixelsPerScanLine + x] = color;
+    for (unsigned int y = 0; y < bi->VerticalResolution; y++) {
+        for (unsigned int x = 0; x < bi->HorizontalResolution; x++) {
+            fb[y * bi->PixelsPerScanLine + x] = screen_bg;
         }
     }
+    kputs("[KERNEL] Screen cleared\n");
 
-    kputs("[KERNEL] Painted 100x100\n");
+    // 📝 텍스트 로그 출력
+    kputs_fb(bi, "[KERNEL] Boot sequence start\n");
+    kputs_fb(bi, "[KERNEL] Initializing memory manager...\n");
+    kputs_fb(bi, "[KERNEL] Initializing interrupt controller...\n");
+    kputs_fb(bi, "[KERNEL] Initializing framebuffer console...\n");
+    kputs_fb(bi, "[KERNEL] Ready.\n");
 
     while (1) { __asm__ __volatile__("hlt"); }
 }
+

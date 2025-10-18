@@ -1,18 +1,33 @@
-TARGET = kernel.elf
-OBJS = kernel.o font_8x16.o   # ✅ 폰트 오브젝트 추가
+# 📌 Toolchain configuration
+CC      = x86_64-elf-gcc
+LD      = x86_64-elf-ld
+CFLAGS  = -ffreestanding -fno-pie -fno-pic -nostdlib -I.
+LDFLAGS = -T kernel.ld -nostdlib -no-pie
+OBJS    = kernel.o serial.o fb.o font.o font_8x16.o
+TARGET  = kernel.elf
+SIGNKEY = priv.pem
+SIGNOUT = kernel.sig
 
-CC = x86_64-elf-gcc
-LD = x86_64-elf-ld
-CFLAGS = -ffreestanding -m64 -O2 -Wall -Wextra
-LDFLAGS = -T kernel.ld --oformat=elf64-x86-64
+# 🛠️ Default build: clean → build → sign
+all: clean $(TARGET) sign
 
-all: $(TARGET)
-
+# 🔸 Compile .c files into .o object files
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# 🔸 Link all object files into the final ELF binary
 $(TARGET): $(OBJS)
-	$(LD) $(LDFLAGS) -o $@ $(OBJS)
+	$(LD) $(LDFLAGS) $(OBJS) -o $(TARGET)
+	@echo "✅ Build complete: $(TARGET)"
 
+# 🔐 Sign ELF binary with private key
+sign:
+	openssl dgst -sha256 -sign $(SIGNKEY) -out $(SIGNOUT) $(TARGET)
+	@echo "🔐 Signed kernel: $(SIGNOUT)"
+
+# 🧹 Clean up build artifacts
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJS) $(TARGET) $(SIGNOUT)
+	@echo "🧹 Clean done"
+
+.PHONY: all clean sign

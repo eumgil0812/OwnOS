@@ -1,5 +1,8 @@
 {
     "files.associations": {
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "font_8x16.h": "c",
+        "font.h": "c",
+        "fb.h": "c"
     }
 }
