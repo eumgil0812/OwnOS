@@ -15,7 +15,7 @@ struct font_desc {
 extern unsigned char fontdata_8x16[FONTDATAMAX];
 extern struct font_desc font_vga_8x16;
 
-void draw_char(BootInfo* bi, int x, int y, char c, uint32_t fg, uint32_t bg);
+
 void draw_string(BootInfo* bi, int x, int y, const char* s, uint32_t fg, uint32_t bg);
 
 #endif

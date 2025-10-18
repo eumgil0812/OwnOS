@@ -1,44 +1,17 @@
-#include <stdint.h>
-#include "serial.h"
 #include "fb.h"
-#include "font.h"
+#include "kprintf.h"
+#include "serial.h"
+
 
 // 커서 위치 전역 변수
 #define COLOR_DARK_GRAY     0x00101010
 
+extern struct font_desc font_vga_8x16;
 
-static int cursor_x = 0;
-static int cursor_y = 0;
-static uint32_t text_fg = 0x00FFFFFF;
-static uint32_t text_bg = COLOR_DARK_GRAY;
-static uint32_t screen_bg = COLOR_DARK_GRAY;
 
-// 📜 개행 처리 함수
-static void fb_newline(BootInfo* bi) {
-    cursor_x = 0;
-    cursor_y += font_vga_8x16.height;
-
-    // 화면 넘어가면 맨 위로 리셋 (스크롤 기능 대신 초기화)
-    if (cursor_y + font_vga_8x16.height > (int)bi->VerticalResolution) {
-        cursor_y = 0;
-    }
-}
-
-// 🖨️ 텍스트 로그 출력 함수
-void kputs_fb(BootInfo* bi, const char* s) {
-    while (*s) {
-        if (*s == '\n') {
-            fb_newline(bi);
-        } else {
-            draw_char(bi, cursor_x, cursor_y, *s, text_fg, text_bg);
-            cursor_x += font_vga_8x16.width;
-
-            // 줄 끝까지 가면 자동 개행
-            if (cursor_x + font_vga_8x16.width > (int)bi->HorizontalResolution) {
-                fb_newline(bi);
-            }
-        }
-        s++;
+static void delay(volatile unsigned long long count) {
+    while (count--) {
+        __asm__ __volatile__("nop");
     }
 }
 
@@ -48,24 +21,27 @@ void kernel_main(BootInfo* bi)
     serial_init();
     kputs("[KERNEL] Serial initialized\n");
 
-    // 🟦 화면 전체 파란색으로 초기화
+    // 🟦 화면 전체 초기화
     uint32_t* fb = (uint32_t*)bi->FrameBufferBase;
-    
-
     for (unsigned int y = 0; y < bi->VerticalResolution; y++) {
         for (unsigned int x = 0; x < bi->HorizontalResolution; x++) {
-            fb[y * bi->PixelsPerScanLine + x] = screen_bg;
+            fb[y * bi->PixelsPerScanLine + x] = COLOR_DARK_GRAY;
         }
     }
     kputs("[KERNEL] Screen cleared\n");
 
-    // 📝 텍스트 로그 출력
-    kputs_fb(bi, "[KERNEL] Boot sequence start\n");
-    kputs_fb(bi, "[KERNEL] Initializing memory manager...\n");
-    kputs_fb(bi, "[KERNEL] Initializing interrupt controller...\n");
-    kputs_fb(bi, "[KERNEL] Initializing framebuffer console...\n");
-    kputs_fb(bi, "[KERNEL] Ready.\n");
+    // 프레임버퍼 콘솔 테스트
+    kputs_fb(bi, "Enter the Kernel.\n");
+    kputs_fb(bi, "[KERNEL] Framebuffer console ready.\n");
+    kputs_fb(bi, "[KERNEL] Checking Scroll.\n");
+    
+    // ⏸️ 잠시 쉬기 (눈으로 확인할 시간 주기)
+    delay(1000000000ULL);
+
+    for (int i = 1; i <=300; i++) {
+        kprintf(bi, "Log line %d\n", i);
+    }
 
     while (1) { __asm__ __volatile__("hlt"); }
+    while (1) { __asm__ __volatile__("hlt"); }
 }
-

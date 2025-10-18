@@ -3,7 +3,11 @@ CC      = x86_64-elf-gcc
 LD      = x86_64-elf-ld
 CFLAGS  = -ffreestanding -fno-pie -fno-pic -nostdlib -I.
 LDFLAGS = -T kernel.ld -nostdlib -no-pie
-OBJS    = kernel.o serial.o fb.o font.o font_8x16.o
+
+# 🔸 object files
+OBJS = kernel.o serial.o fb.o font.o font_8x16.o kprintf.o string.o
+
+
 TARGET  = kernel.elf
 SIGNKEY = priv.pem
 SIGNOUT = kernel.sig
