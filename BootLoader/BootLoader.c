@@ -1,6 +1,5 @@
-// BootLoader.c (Secure Boot + GOP + FrameBuffer + Jump to Kernel)
 #include <Uefi.h>
-#include <Library/BaseMemoryLib.h>             // ✅ CopyMem, ZeroMem 사용
+#include <Library/BaseMemoryLib.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -10,6 +9,7 @@
 #include <Protocol/GraphicsOutput.h>
 #include <Guid/FileInfo.h>
 #include <Guid/Acpi.h>
+#include <elf.h>
 
 #include "pubkey_der.h"
 #include "mbedtls/pk.h"
@@ -34,12 +34,10 @@ EFI_STATUS VerifyKernelSignature(
     BootInfo* bi
 ) {
     int ret;
-    mbedtls_pk_context pk;
     unsigned char hash[32];
+    mbedtls_pk_context pk;
 
     mbedtls_pk_init(&pk);
-
-    // parse embedded DER public key
     ret = mbedtls_pk_parse_public_key(&pk,
         (const unsigned char*)pubkey_der,
         (size_t)pubkey_der_len);
@@ -49,7 +47,6 @@ EFI_STATUS VerifyKernelSignature(
         return EFI_SECURITY_VIOLATION;
     }
 
-    // SHA-256 hash
 #if defined(MBEDTLS_SHA256_ALT) || defined(MBEDTLS_SHA256_C)
     ret = mbedtls_sha256_ret((const unsigned char*)kernelBuf, kernelSize, hash, 0);
 #else
@@ -61,7 +58,6 @@ EFI_STATUS VerifyKernelSignature(
         return EFI_SECURITY_VIOLATION;
     }
 
-    // Verify signature
     ret = mbedtls_pk_verify(&pk, MBEDTLS_MD_SHA256, hash, 0,
                             (const unsigned char*)sigBuf, sigSize);
     mbedtls_pk_free(&pk);
@@ -71,12 +67,34 @@ EFI_STATUS VerifyKernelSignature(
         return EFI_SECURITY_VIOLATION;
     }
 
-    // ✅ OK — store hash into BootInfo
     bi->verified = 1;
-    CopyMem(bi->kernel_hash, hash, 32);   // ✅ memcpy 대체
+    CopyMem(bi->kernel_hash, hash, 32);
     Print(L"[SECURE BOOT] signature OK\n");
 
     return EFI_SUCCESS;
+}
+
+// ---------------- ELF Loader ----------------
+STATIC
+VOID LoadELFSegments(VOID* elfBase) {
+    Elf64_Ehdr* ehdr = (Elf64_Ehdr*)elfBase;
+    Elf64_Phdr* phdr = (Elf64_Phdr*)((UINT8*)elfBase + ehdr->e_phoff);
+
+    for (int i = 0; i < ehdr->e_phnum; i++) {
+        if (phdr[i].p_type != PT_LOAD) continue;
+
+        VOID* src = (VOID*)((UINT8*)elfBase + phdr[i].p_offset);
+        VOID* dst = (VOID*)(phdr[i].p_paddr);
+        CopyMem(dst, src, phdr[i].p_filesz);
+
+        if (phdr[i].p_memsz > phdr[i].p_filesz) {
+            SetMem((UINT8*)dst + phdr[i].p_filesz,
+                   phdr[i].p_memsz - phdr[i].p_filesz, 0);
+        }
+
+        Print(L"[ELF] Segment %d: dst=0x%lx, size=%lu bytes\n",
+              i, phdr[i].p_paddr, phdr[i].p_filesz);
+    }
 }
 
 // ---------------- Main ----------------
@@ -87,25 +105,24 @@ EFI_STATUS EFIAPI UefiMain(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *Syste
     EFI_FILE_PROTOCOL *RootDir = NULL, *KernelFile = NULL, *SigFile = NULL;
     EFI_FILE_INFO *FileInfo = NULL, *SigInfo = NULL;
     UINTN FileInfoSize = 0, SigInfoSize = 0;
-    VOID *KernelBuffer = NULL;
     UINT8 *SigBuffer = NULL;
     UINTN KernelSize, SigSize;
     EFI_GRAPHICS_OUTPUT_PROTOCOL* Gop = NULL;
-    
-    BootInfo bi; ZeroMem(&bi, sizeof(BootInfo));   // ✅ memset 대체
     KernelEntry EntryPoint;
 
     Print(L"[UEFI] Skylar BootLoader start\n");
 
-    // Filesystem
+    // ---------------- Filesystem ----------------
     Status = gBS->HandleProtocol(ImageHandle, &gEfiLoadedImageProtocolGuid, (VOID**)&LoadedImage);
     if (EFI_ERROR(Status)) return Status;
+
     Status = gBS->HandleProtocol(LoadedImage->DeviceHandle, &gEfiSimpleFileSystemProtocolGuid, (VOID**)&FileSystem);
     if (EFI_ERROR(Status)) return Status;
+
     Status = FileSystem->OpenVolume(FileSystem, &RootDir);
     if (EFI_ERROR(Status)) return Status;
 
-    // kernel.elf
+    // ---------------- Load kernel.elf ----------------
     Status = RootDir->Open(RootDir, &KernelFile, L"kernel.elf", EFI_FILE_MODE_READ, 0);
     if (EFI_ERROR(Status)) {
         Print(L"[ERROR] Cannot open kernel.elf\n");
@@ -117,20 +134,23 @@ EFI_STATUS EFIAPI UefiMain(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *Syste
         gBS->AllocatePool(EfiLoaderData, FileInfoSize, (VOID**)&FileInfo);
         KernelFile->GetInfo(KernelFile, &gEfiFileInfoGuid, &FileInfoSize, FileInfo);
     }
+
     KernelSize = FileInfo->FileSize;
-    gBS->AllocatePages(AllocateAnyPages, EfiLoaderData,
-        EFI_SIZE_TO_PAGES(KernelSize), (EFI_PHYSICAL_ADDRESS*)&KernelBuffer);
+    EFI_PHYSICAL_ADDRESS KernelBase = 0x200000; // ELF 임시 로드용 (header 포함)
+    Status = gBS->AllocatePages(AllocateAddress, EfiLoaderData,
+        EFI_SIZE_TO_PAGES(KernelSize), &KernelBase);
 
     UINTN toRead = KernelSize;
-    KernelFile->Read(KernelFile, &toRead, KernelBuffer);
-    Print(L"[INFO] Kernel loaded at %p (%u bytes)\n", KernelBuffer, (UINT32)KernelSize);
+    KernelFile->Read(KernelFile, &toRead, (VOID*)KernelBase);
+    Print(L"[INFO] Kernel ELF loaded at 0x%lx (%u bytes)\n", KernelBase, (UINT32)KernelSize);
 
-    // kernel.sig
+    // ---------------- Load kernel.sig ----------------
     Status = RootDir->Open(RootDir, &SigFile, L"kernel.sig", EFI_FILE_MODE_READ, 0);
     if (EFI_ERROR(Status)) {
         Print(L"[SECURE BOOT] kernel.sig not found — abort\n");
         for (;;) { __asm__ __volatile__("hlt"); }
     }
+
     SigFile->GetInfo(SigFile, &gEfiFileInfoGuid, &SigInfoSize, NULL);
     gBS->AllocatePool(EfiLoaderData, SigInfoSize, (VOID**)&SigInfo);
     SigFile->GetInfo(SigFile, &gEfiFileInfoGuid, &SigInfoSize, SigInfo);
@@ -140,50 +160,54 @@ EFI_STATUS EFIAPI UefiMain(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *Syste
     SigFile->Read(SigFile, &toRead, SigBuffer);
     Print(L"[SECURE BOOT] kernel.sig loaded (%u bytes)\n", (UINT32)SigSize);
 
-    Status = VerifyKernelSignature(KernelBuffer, KernelSize, SigBuffer, SigSize, &bi);
+    // ---------------- Secure Boot Check ----------------
+    BootInfo* bi;
+    gBS->AllocatePool(EfiLoaderData, sizeof(BootInfo), (VOID**)&bi);
+    ZeroMem(bi, sizeof(BootInfo));
+
+    Status = VerifyKernelSignature((VOID*)KernelBase, KernelSize, SigBuffer, SigSize, bi);
     if (EFI_ERROR(Status)) {
         Print(L"[SECURE BOOT] INVALID - Halting.\n");
         for (;;) { __asm__ __volatile__("hlt"); }
     }
 
-    // Framebuffer (dummy)
-    /*
-    bi.FrameBufferBase = (VOID*)0x00000000;
-    bi.HorizontalResolution = 800;
-    bi.VerticalResolution = 600;
-    bi.PixelsPerScanLine = 800;
-    */
-
+    // ---------------- Framebuffer ----------------
     Status = gBS->LocateProtocol(&gEfiGraphicsOutputProtocolGuid, NULL, (VOID**)&Gop);
-
     if (EFI_ERROR(Status)) {
         Print(L"Failed to get GOP\n");
         return Status;
     }
 
-    bi.FrameBufferBase = (VOID*)Gop->Mode->FrameBufferBase;
-    bi.HorizontalResolution = Gop->Mode->Info->HorizontalResolution;
-    bi.VerticalResolution = Gop->Mode->Info->VerticalResolution;
-    bi.PixelsPerScanLine = Gop->Mode->Info->PixelsPerScanLine;
+    bi->FrameBufferBase      = (VOID*)Gop->Mode->FrameBufferBase;
+    bi->HorizontalResolution = Gop->Mode->Info->HorizontalResolution;
+    bi->VerticalResolution   = Gop->Mode->Info->VerticalResolution;
+    bi->PixelsPerScanLine    = Gop->Mode->Info->PixelsPerScanLine;
 
-    EntryPoint = (KernelEntry)KernelBuffer;
+    Print(L"[GOP] FB=0x%lx, Res=%dx%d, Stride=%d\n",
+          bi->FrameBufferBase,
+          bi->HorizontalResolution,
+          bi->VerticalResolution,
+          bi->PixelsPerScanLine);
 
-    // Exit Boot Services
+    // ---------------- Load ELF Segments properly ----------------
+    LoadELFSegments((VOID*)KernelBase);
+
+    // ---------------- ELF EntryPoint ----------------
+    Elf64_Ehdr* ehdr = (Elf64_Ehdr*)KernelBase;
+    EntryPoint = (KernelEntry)(ehdr->e_entry);
+    Print(L"[BOOT] Jumping to kernel entry: 0x%lx\n", ehdr->e_entry);
+
+    // ---------------- Exit Boot Services ----------------
     UINTN MapSize = 0, MapKey, DescriptorSize;
     UINT32 DescriptorVersion;
-    EFI_MEMORY_DESCRIPTOR *MemMap = NULL;
-
-    gBS->GetMemoryMap(&MapSize, MemMap, &MapKey, &DescriptorSize, &DescriptorVersion);
+    EFI_MEMORY_DESCRIPTOR *MemoryMap = NULL;
+    gBS->GetMemoryMap(&MapSize, MemoryMap, &MapKey, &DescriptorSize, &DescriptorVersion);
     MapSize += DescriptorSize * 10;
-    gBS->AllocatePool(EfiLoaderData, MapSize, (VOID**)&MemMap);
-    gBS->GetMemoryMap(&MapSize, MemMap, &MapKey, &DescriptorSize, &DescriptorVersion);
-    
-    
-    
-    gBS->Stall(5000000);   // 5,000,000 microseconds = 5 seconds
-
+    gBS->AllocatePool(EfiLoaderData, MapSize, (VOID**)&MemoryMap);
+    gBS->GetMemoryMap(&MapSize, MemoryMap, &MapKey, &DescriptorSize, &DescriptorVersion);
     gBS->ExitBootServices(ImageHandle, MapKey);
 
-    EntryPoint(&bi);
+    // ---------------- Jump! ----------------
+    EntryPoint(bi);
     return EFI_SUCCESS;
 }
