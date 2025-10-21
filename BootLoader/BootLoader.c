@@ -65,7 +65,7 @@ EFI_STATUS VerifyKernelSignature(
         return EFI_SECURITY_VIOLATION;
     }
 
-    ret = mbedtls_pk_verify(&pk, MBEDTLS_MD_SHA256, hash, 0,
+    ret = mbedtls_pk_verify(&pk, MBEDTLS_MD_SHA256, hash, 32,
                             (const unsigned char*)sigBuf, sigSize);
     mbedtls_pk_free(&pk);
 
