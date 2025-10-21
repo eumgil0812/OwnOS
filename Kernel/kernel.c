@@ -3,6 +3,7 @@
 #include "serial.h"
 #include "memory.h"
 #include "pmm.h"
+#include "vmm.h"
 #include <stdint.h>   
 #include <efi.h>  
 
@@ -45,6 +46,10 @@ void kernel_main(BootInfo* bi)
 
 
     pmm_init(bi, 0x200000ULL);
+
+
+    /* 0~1GiB 아이덴티티 매핑 + FB 매핑, CR3 로드 */
+    vmm_init(bi, 1);   // 1 GiB 정도면 충분. 필요하면 2~4로.
 
     // 2) 테스트: 페이지 3개 할당 → 주소 출력 → 반납
     void* a = pmm_alloc_page();

@@ -4,6 +4,7 @@
         "font_8x16.h": "c",
         "font.h": "c",
         "fb.h": "c",
-        "kprintf.h": "c"
+        "kprintf.h": "c",
+        "memory.h": "c"
     }
 }
