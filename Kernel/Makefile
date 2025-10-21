@@ -5,7 +5,7 @@ CFLAGS  = -ffreestanding -fno-pie -fno-pic -nostdlib -I.
 LDFLAGS = -T kernel.ld -nostdlib -no-pie
 
 # 🔸 object files
-OBJS = kernel.o serial.o fb.o font.o font_8x16.o memory.o kprintf.o string.o
+OBJS = kernel.o serial.o fb.o font.o font_8x16.o memory.o kprintf.o pmm.o string.o
 
 
 TARGET  = kernel.elf

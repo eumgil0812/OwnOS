@@ -2,6 +2,7 @@
 #include "kprintf.h"
 #include "serial.h"
 #include "memory.h"
+#include "pmm.h"
 #include <stdint.h>   
 #include <efi.h>  
 
@@ -43,8 +44,20 @@ void kernel_main(BootInfo* bi)
     memmap_report(bi);              // ✅ 메모리맵 리포트 호출
 
 
-    // (데모 속도↑ 원하면 줄이기)
-    delay(1000000000ULL); 
+    pmm_init(bi, 0x200000ULL);
+
+    // 2) 테스트: 페이지 3개 할당 → 주소 출력 → 반납
+    void* a = pmm_alloc_page();
+    void* b = pmm_alloc_page();
+    void* c = pmm_alloc_page();
+    kprintf(bi, "[PMM] alloc a=%p b=%p c=%p\n", a, b, c);
+    kprintf(bi, "[PMM] used=%llu / %llu pages\n",
+            (unsigned long long)pmm_used_pages(),
+            (unsigned long long)pmm_total_pages());
+
+    pmm_free_page(b);
+    kprintf(bi, "[PMM] free b, used=%llu\n",
+            (unsigned long long)pmm_used_pages());
 
   
 
