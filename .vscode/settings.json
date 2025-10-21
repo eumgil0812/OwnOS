@@ -5,6 +5,8 @@
         "font.h": "c",
         "fb.h": "c",
         "kprintf.h": "c",
-        "memory.h": "c"
+        "memory.h": "c",
+        "pmm.h": "c",
+        "vmm.h": "c"
     }
 }

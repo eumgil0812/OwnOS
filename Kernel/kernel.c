@@ -4,11 +4,15 @@
 #include "memory.h"
 #include "pmm.h"
 #include "vmm.h"
+#include "idt.h"
+#include "isr.h"
 #include <stdint.h>   
 #include <efi.h>  
 
 #define COLOR_DARK_GRAY 0x00101010
 extern struct font_desc font_vga_8x16;
+
+BootInfo* g_bootinfo = 0;  // ← 전역 '정의' (유일하게 한 번만)
 
 static void delay(volatile unsigned long long count) {
     while (count--) { __asm__ __volatile__("nop"); }
@@ -23,6 +27,7 @@ static void print_hash(BootInfo* bi){
 
 void kernel_main(BootInfo* bi) 
 {
+    g_bootinfo = bi; 
     serial_init();
     kputs("[KERNEL] Serial initialized\n");
 
@@ -64,7 +69,7 @@ void kernel_main(BootInfo* bi)
     kprintf(bi, "[PMM] free b, used=%llu\n",
             (unsigned long long)pmm_used_pages());
 
-  
+    interrupts_init(); 
 
     while (1) { __asm__ __volatile__("hlt"); }
 }
