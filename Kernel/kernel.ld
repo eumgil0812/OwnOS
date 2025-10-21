@@ -1,17 +1,23 @@
+OUTPUT_FORMAT(elf64-x86-64)
+OUTPUT_ARCH(i386:x86-64)
 ENTRY(kernel_main)
 
 SECTIONS {
-    . = 0x100000;
+  . = 0x100000;
 
-    .text : {
-        *(.text*)
-    }
+  .text : ALIGN(0x1000) {
+    *(.text .text.*)
+    *(.rodata .rodata.*)
+  }
 
-    .data : {
-        *(.data*)
-    }
+  .data : ALIGN(0x1000) {
+    *(.data .data.*)
+  }
 
-    .bss : {
-        *(.bss*)
-    }
+  .bss : ALIGN(0x1000) {
+    *(COMMON)
+    *(.bss .bss.*)
+  }
+
+  /DISCARD/ : { *(.comment) *(.eh_frame*) *(.note*) }
 }

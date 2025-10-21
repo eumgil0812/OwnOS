@@ -8,8 +8,14 @@ typedef struct {
     unsigned int HorizontalResolution;
     unsigned int VerticalResolution;
     unsigned int PixelsPerScanLine;
-    uint8_t verified;
-    uint8_t kernel_hash[32];
+    uint8_t  verified;
+    uint8_t  kernel_hash[32];
+
+    // NEW: ExitBootServices 이후에도 커널이 읽을 수 있게 사본 전달
+    void*  MemoryMap;        // 커널이 읽을 사본 주소
+    uint64_t  MemoryMapSize;    // 바이트 단위
+    uint64_t  DescriptorSize;
+    uint32_t ABI_Version;      // 호환성용 (예: 1)
 } BootInfo;
 
 // 📌 선언 추가
