@@ -82,20 +82,26 @@ static region_t find_largest_conventional(BootInfo* bi) {
 void memmap_dump(BootInfo* bi, uint32_t limit) {
     const uint8_t* p = (const uint8_t*)bi->MemoryMap;
     uint32_t count = 0;
+
     kputs_fb(bi, "┌─[Memory Map Dump]───────────────────────────────────────────\n");
-    kputs_fb(bi, "│  Type              Base             Pages      Size       Attr\n");
+    kputs_fb(bi, "│  Type              Base               Pages      Size       Attr\n");
     kputs_fb(bi, "│  --------------------------------------------------------------\n");
+
     for (uint64_t off=0; off < bi->MemoryMapSize; off += bi->DescriptorSize) {
         const EFI_MEMORY_DESCRIPTOR* d = (const EFI_MEMORY_DESCRIPTOR*)(p + off);
-        uint64_t sz = pages_to_bytes(d->NumberOfPages);
-        kprintf(bi, "│  %-16s 0x%012llx %10llu ",
-            efi_type(d->Type),
-            (unsigned long long)d->PhysicalStart,
-            (unsigned long long)d->NumberOfPages);
+        uint64_t sz = d->NumberOfPages * 4096ULL;
+
+        kputs_fb(bi, "│  ");
+        print_padded(bi, efi_type(d->Type), 16);
+        kprintf(bi, "  0x%016llx %10llu ",
+                (unsigned long long)d->PhysicalStart,
+                (unsigned long long)d->NumberOfPages);
+
         print_size_auto(bi, sz);
         kprintf(bi, "  0x%llx ", (unsigned long long)d->Attribute);
         print_mem_attrs(bi, d->Attribute);
         kputs_fb(bi, "\n");
+
         if (++count >= limit) break;
     }
     kputs_fb(bi, "└───────────────────────────────────────────────────────────────\n");
@@ -126,7 +132,10 @@ void memmap_summary(BootInfo* bi) {
     kputs_fb(bi, "│  By Type:\n");
     for (uint32_t t=0; t<=13; ++t) {
         if (!type_count[t]) continue;
-        kprintf(bi, "│   - %-16s : %llu regions\n", efi_type(t), (unsigned long long)type_count[t]);
+        kputs_fb(bi, "│   - ");
+        print_padded(bi, efi_type(t), 16);
+        kprintf(bi, " : %llu regions\n", (unsigned long long)type_count[t]);
+
     }
 
     region_t best = find_largest_conventional(bi);

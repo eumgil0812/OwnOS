@@ -22,6 +22,7 @@ extern "C" {
  * @param ...  가변 인자
  */
 void kprintf(BootInfo* bi, const char* fmt, ...);
+void print_padded(BootInfo* bi, const char* s, int width);
 
 #ifdef __cplusplus
 }

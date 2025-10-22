@@ -69,7 +69,6 @@ static void print_int(BootInfo* bi, int64_t val, int width, char pad) {
         print_uint(bi, (uint64_t)val, 10, width, pad, false);
     }
 }
-
 void kprintf(BootInfo* bi, const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
@@ -156,3 +155,17 @@ void kprintf(BootInfo* bi, const char* fmt, ...) {
 
     va_end(ap);
 }
+
+
+
+void print_padded(BootInfo* bi, const char* s, int width) {
+    char buf[128];
+    int n = 0;
+    // 문자열 복사(잘림 허용)
+    while (s[n] && n < width && n < (int)sizeof(buf)-1) buf[n] = s[n], n++;
+    // 남는 칸 공백 패딩
+    while (n < width && n < (int)sizeof(buf)-1) buf[n++] = ' ';
+    buf[n] = '\0';
+    kprintf(bi, "%s", buf);  // %s는 지원되므로 OK
+}
+
