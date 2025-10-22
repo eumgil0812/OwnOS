@@ -6,30 +6,31 @@
 #include "vmm.h"
 #include "idt.h"
 #include "isr.h"
-#include <stdint.h>   
-#include <efi.h>  
+#include <stdint.h>
+#include <efi.h>
 
 #define COLOR_DARK_GRAY 0x00101010
 extern struct font_desc font_vga_8x16;
 
-BootInfo* g_bootinfo = 0;  // ← 전역 '정의' (유일하게 한 번만)
+BootInfo* g_bootinfo = 0;  // Global BootInfo pointer
 
 static void delay(volatile unsigned long long count) {
     while (count--) { __asm__ __volatile__("nop"); }
 }
 
-// 해시 32바이트를 보기 좋게 찍는 헬퍼(선택)
-static void print_hash(BootInfo* bi){
+// Print 32-byte kernel hash for verification
+static void print_hash(BootInfo* bi) {
     kprintf(bi, "[HASH] ");
     for (int i = 0; i < 32; i++) kprintf(bi, "%02x", bi->kernel_hash[i]);
     kprintf(bi, "\n");
 }
 
+// Boot banner display
 static void bootinfo_banner(BootInfo* bi) {
     kputs_fb(bi, "===============================================================\n");
     kputs_fb(bi, "                   Tiny x86_64 Kernel Boot                     \n");
     kputs_fb(bi, "===============================================================\n");
-    kprintf(bi,   "ABI v%u | FB=%p %ux%u px/scan=%u | verified=%u\n",
+    kprintf(bi, "ABI v%u | FB=%p %ux%u px/scan=%u | verified=%u\n",
         (unsigned)bi->ABI_Version,
         bi->FrameBufferBase,
         bi->HorizontalResolution, bi->VerticalResolution,
@@ -43,9 +44,9 @@ void kernel_main(BootInfo* bi)
     serial_init();
     kputs("[KERNEL] Serial initialized\n");
 
-    bootinfo_banner(bi);       // 🔵 부트 배너 + 기본 정보
+    bootinfo_banner(bi);  // Display boot info and framebuffer details
 
-    // 화면 초기화
+    // Clear screen
     uint32_t* fb = (uint32_t*)bi->FrameBufferBase;
     for (unsigned int y = 0; y < bi->VerticalResolution; y++) {
         for (unsigned int x = 0; x < bi->HorizontalResolution; x++) {
@@ -54,32 +55,30 @@ void kernel_main(BootInfo* bi)
     }
     kputs("[KERNEL] Screen cleared\n");
 
-    // 프레임버퍼 콘솔 테스트
+    // Framebuffer console test
     kputs_fb(bi, "Enter the Kernel.\n");
     kputs_fb(bi, "[KERNEL] Framebuffer console ready.\n");
 
-    // 신뢰사슬/메모리 리포트
+    // Trust chain and memory summary
     kprintf(bi, "[KERNEL] verified=%u\n", (unsigned)bi->verified);
-    print_hash(bi);                 //
-    memmap_summary(bi);             //
-    memmap_dump(bi, 24);            // 
+    print_hash(bi);
+    memmap_summary(bi);
+    memmap_dump(bi, 24);
 
-/*
+    // ------------------------------
+    // PMM Initialization & Test
+    // ------------------------------
     kputs("[PMM] initializing...\n");
+    kputs("[PMM] Searching for largest free region...\n");
     pmm_init(bi, 0x200000ULL);
-    kprintf(bi, "[PMM] total=%llu pages (",
-            (unsigned long long)pmm_total_pages());
+    kputs("[PMM] initialization complete\n");
+
+    kprintf(bi, "[PMM] total=%llu pages (", (unsigned long long)pmm_total_pages());
     print_size_auto(bi, pages_to_bytes(pmm_total_pages())); kputs_fb(bi, ")\n");
-    kprintf(bi, "[PMM] used =%llu pages (",
-            (unsigned long long)pmm_used_pages());
+    kprintf(bi, "[PMM] used =%llu pages (", (unsigned long long)pmm_used_pages());
     print_size_auto(bi, pages_to_bytes(pmm_used_pages()));  kputs_fb(bi, ")\n");
 
-    // 0~1GiB 아이덴티티 매핑 + FB 매핑, CR3 로드 
-    kputs("[VMM] setting up page tables...\n");
-    vmm_init(bi, 1);
-    kputs("[VMM] done.\n");
-
-    // 테스트: 페이지 3개 할당 → 주소/통계 출력 → 일부 반납
+    // Test allocation: allocate 3 pages, print addresses, and free one
     void* a = pmm_alloc_page();
     void* b = pmm_alloc_page();
     void* c = pmm_alloc_page();
@@ -87,14 +86,30 @@ void kernel_main(BootInfo* bi)
     kprintf(bi, "[PMM] used=%llu / %llu pages\n",
             (unsigned long long)pmm_used_pages(),
             (unsigned long long)pmm_total_pages());
-
     pmm_free_page(b);
     kprintf(bi, "[PMM] free b, used=%llu pages\n",
             (unsigned long long)pmm_used_pages());
 
+    // ------------------------------
+    // VMM Setup (Identity Mapping + Framebuffer)
+    // ------------------------------
+    kputs("[VMM] setting up page tables...\n");
+    vmm_init(bi, 1);
+    kputs("[VMM] done.\n");
+
+    // 🔍 Display CPU control register states (paging + protection bits)
+    uint64_t cr0, cr4;
+    __asm__ volatile("mov %%cr0, %0" : "=r"(cr0));
+    __asm__ volatile("mov %%cr4, %0" : "=r"(cr4));
+    kprintf(bi, "[CPU] CR0=0x%llx (PG=%d, WP=%d), CR4=0x%llx (PAE=%d, PGE=%d)\n",
+            cr0, !!(cr0 & (1ULL << 31)), !!(cr0 & (1ULL << 16)),
+            cr4, !!(cr4 & (1ULL << 5)), !!(cr4 & (1ULL << 7)));
+
+    // ------------------------------
+    // Enable interrupts and halt
+    // ------------------------------
     interrupts_init(); 
     kputs("[IDT] interrupts enabled, halting...\n");
-*/
+
     while (1) { __asm__ __volatile__("hlt"); }
 }
-

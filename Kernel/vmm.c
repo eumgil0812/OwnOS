@@ -1,3 +1,14 @@
+/*
+ * ==========================================================
+ *  Virtual Memory Manager (VMM)
+ *  - Sets up 4-level paging for x86_64
+ *  - Uses 2MiB large pages for kernel identity mapping
+ *  - Builds page tables dynamically via PMM allocation
+ *
+ *  Author : Skylar
+ *  Purpose: Early-stage kernel virtual memory initialization
+ * ==========================================================
+ */
 #include "vmm.h"
 #include "kprintf.h"
 #include <string.h>
