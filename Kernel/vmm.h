@@ -12,3 +12,6 @@ void vmm_init(BootInfo* bi, uint64_t map_gb);
 void vmm_map_range_2m(uint64_t phys_start, uint64_t size_bytes);
 
 // (선택) 1 페이지(4KiB) 매핑 버전이 필요하면 이후 추가
+void vmm_map_page(uint64_t vaddr, uint64_t paddr, uint64_t flags);
+void vmm_unmap_page(uint64_t vaddr);
+void vmm_handle_pagefault(uint64_t fault_addr, uint64_t error_code);

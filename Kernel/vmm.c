@@ -115,3 +115,91 @@ void vmm_init(BootInfo* bi, uint64_t map_gb) {
             (unsigned long long)fb_phys,
             (unsigned long long)(fb_size >> 10));
 }
+
+
+void vmm_map_page(uint64_t vaddr, uint64_t paddr, uint64_t flags)
+{
+    uint64_t pl4i  = (vaddr >> 39) & 0x1FF;
+    uint64_t pdpti = (vaddr >> 30) & 0x1FF;
+    uint64_t pdi   = (vaddr >> 21) & 0x1FF;
+    uint64_t pti   = (vaddr >> 12) & 0x1FF;
+
+    uint64_t* pdpt = get_or_make_pdpt(g_pml4, pl4i);
+    uint64_t* pd   = get_or_make_pd(pdpt, pdpti);
+
+    // PD[pdi]가 2MiB 대페이지면 쪼개야 함
+    if (pd[pdi] & PTE_PS) {
+        // 기존 2MiB 매핑 제거 → 새로운 PT 생성
+        uint64_t old_base = pd[pdi] & 0x000FFFFFFFE00000ULL;
+        uint64_t* pt = (uint64_t*)(uintptr_t)new_zero_page_phys();
+        for (uint64_t i = 0; i < 512; i++) {
+            pt[i] = (old_base + i * PAGE_SIZE_4K) | PTE_P | PTE_W;
+        }
+        pd[pdi] = ((uint64_t)(uintptr_t)pt) | PTE_P | PTE_W;
+    }
+
+    // PT 주소 얻기
+    uint64_t* pt = (uint64_t*)(uintptr_t)(pd[pdi] & 0x000FFFFFFFFFF000ULL);
+
+    // 실제 4KiB 매핑
+    pt[pti] = (paddr & 0x000FFFFFFFFFF000ULL) | flags | PTE_P;
+}
+
+
+void vmm_unmap_page(uint64_t vaddr)
+{
+    uint64_t pl4i  = (vaddr >> 39) & 0x1FF;
+    uint64_t pdpti = (vaddr >> 30) & 0x1FF;
+    uint64_t pdi   = (vaddr >> 21) & 0x1FF;
+    uint64_t pti   = (vaddr >> 12) & 0x1FF;
+
+    uint64_t* pdpt = (uint64_t*)(uintptr_t)(g_pml4[pl4i] & 0x000FFFFFFFFFF000ULL);
+    if (!pdpt) return;
+
+    uint64_t* pd = (uint64_t*)(uintptr_t)(pdpt[pdpti] & 0x000FFFFFFFFFF000ULL);
+    if (!pd) return;
+
+    if (pd[pdi] & PTE_PS) return; // 2MiB 대페이지는 생략
+
+    uint64_t* pt = (uint64_t*)(uintptr_t)(pd[pdi] & 0x000FFFFFFFFFF000ULL);
+    if (!pt) return;
+
+    uint64_t entry = pt[pti];
+    if (entry & PTE_P) {
+        uint64_t phys = entry & 0x000FFFFFFFFFF000ULL;
+        pmm_free_page((void*)(uintptr_t)phys);
+        pt[pti] = 0;
+        __asm__ volatile("invlpg (%0)" :: "r"(vaddr) : "memory");
+    }
+}
+
+// 페이지 폴트 핸들러 (ISR에서 호출)
+void vmm_handle_pagefault(uint64_t fault_addr, uint64_t error_code)
+{
+    // CR2: fault_addr, error_code 비트 의미
+    // bit0: P=0 (not-present)
+    // bit1: W=1 (write fault)
+    // bit2: U=1 (user mode)
+    // bit3: RSVD=1
+    // bit4: I/D=1 (instruction fetch)
+
+    kprintf(NULL, "[#PF] addr=0x%llx err=0x%llx\n",
+            (unsigned long long)fault_addr,
+            (unsigned long long)error_code);
+
+    // 없는 페이지면 새로 할당
+    if ((error_code & 0x1) == 0) {
+        void* new_page = pmm_alloc_page();
+        if (new_page) {
+            vmm_map_page(PAGE_ALIGN_DOWN(fault_addr), (uint64_t)new_page, PTE_W);
+            kprintf(NULL, "[#PF] Auto-allocated page @ 0x%llx\n",
+                    (unsigned long long)PAGE_ALIGN_DOWN(fault_addr));
+            return;
+        }
+    }
+
+    // 실패 시 커널 패닉
+    kprintf(NULL, "[#PF] Fatal: cannot handle page fault.\n");
+    while (1) __asm__ volatile("hlt");
+}
+

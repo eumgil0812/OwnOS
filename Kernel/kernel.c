@@ -11,7 +11,7 @@
 
 #define COLOR_DARK_GRAY 0x00101010
 extern struct font_desc font_vga_8x16;
-
+#define PTE_W (1ULL << 1)
 BootInfo* g_bootinfo = 0;  // Global BootInfo pointer
 
 static void delay(volatile unsigned long long count) {
@@ -104,6 +104,36 @@ void kernel_main(BootInfo* bi)
     kprintf(bi, "[CPU] CR0=0x%llx (PG=%d, WP=%d), CR4=0x%llx (PAE=%d, PGE=%d)\n",
             cr0, !!(cr0 & (1ULL << 31)), !!(cr0 & (1ULL << 16)),
             cr4, !!(cr4 & (1ULL << 5)), !!(cr4 & (1ULL << 7)));
+    // ------------------------------
+    // VMM 동적 매핑 테스트
+    // ------------------------------
+    kputs("[VMM] dynamic mapping test...\n");
+
+    // 1. 새 물리 페이지 확보
+    void* phys = pmm_alloc_page();
+    kprintf(bi, "[VMM] new phys page = %p\n", phys);
+
+    // 2. 가상주소 지정 (예: 커널 상위 주소 영역 중 여유 주소)
+    uint64_t vaddr = 0xFFFF800000100000ULL;
+
+    // 3. 매핑
+    vmm_map_page(vaddr, (uint64_t)phys, PTE_W);
+    kprintf(bi, "[VMM] mapped phys=%p -> virt=0x%llx\n", phys, (unsigned long long)vaddr);
+
+
+    // ------------------------------
+    // VMM Mapping Verify Test (Identity 구간에서)
+    // ------------------------------
+    uint64_t* virt_ptr = (uint64_t*)0x00100000;   // 1 MiB 부근, 이미 아이덴티티 매핑됨
+    *virt_ptr = 0xDEADBEEFCAFEBABEULL;
+        
+        kprintf(bi, "[VMM] wrote value 0x%llx to virt=%p\n",
+            (unsigned long long)*virt_ptr, virt_ptr);
+        
+    uint64_t val = *virt_ptr;
+        kprintf(bi, "[VMM] read value 0x%llx from virt=%p\n",
+            (unsigned long long)val, virt_ptr);
+
 
     // ------------------------------
     // Enable interrupts and halt
