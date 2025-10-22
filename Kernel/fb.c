@@ -12,11 +12,17 @@ static int cursor_y = 0;
 static uint32_t text_fg = 0x00FFFFFF;
 static uint32_t text_bg = COLOR_DARK_GRAY;
 
+static void delay_cycles(uint64_t cycles) {
+    for (volatile uint64_t i = 0; i < cycles; i++) {
+        __asm__ __volatile__("nop");
+    }
+}
 // 📜 개행 처리 함수
 static void fb_newline(BootInfo* bi) {
     cursor_x = 0;
     cursor_y += font_vga_8x16.height;
     if (cursor_y + font_vga_8x16.height > (int)bi->VerticalResolution) {
+        delay_cycles(500000000); 
         fb_scroll(bi);
     }
 }

@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 // ============================================
-// 🧱 UEFI Memory Type Definitions (UEFI 2.9)
+//  UEFI Memory Type Definitions (UEFI 2.9)
 // ============================================
 enum {
     EfiReservedMemoryType        = 0,
@@ -25,7 +25,7 @@ enum {
 
 
 // ============================================
-// 📄 EFI Memory Descriptor Structure
+//  EFI Memory Descriptor Structure
 // ============================================
 typedef struct {
     uint32_t Type;
@@ -36,7 +36,7 @@ typedef struct {
 } EFI_MEMORY_DESCRIPTOR;
 
 // ============================================
-// 📌 Convert memory type to human-readable text
+// Convert memory type to human-readable text
 // ============================================
 static const char* EfiMemoryTypeToStr(uint32_t Type) {
     switch (Type) {
